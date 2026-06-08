@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8"/>
+    <title>로그인 - chat</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 360px; margin: 80px auto; padding: 0 16px; }
+        h1 { font-size: 20px; }
+        form { display: flex; gap: 8px; }
+        input[name=nickname] { flex: 1; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; }
+        button { padding: 8px 14px; border: 0; border-radius: 6px; background: #4a7dff; color: white; cursor: pointer; }
+    </style>
+</head>
+<body>
+<h1>닉네임으로 입장</h1>
+<form method="post" action="/login">
+    <input name="nickname" placeholder="닉네임" autofocus required maxlength="20"/>
+    <button type="submit">입장</button>
+</form>
+</body>
+</html>
