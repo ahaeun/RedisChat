@@ -9,6 +9,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -99,7 +100,10 @@ public class ChatService {
         List<ChatMessage> result = new ArrayList<>(recent.size());
         for (ChatMessage m : recent) {
             // 보낸이와 viewer 자신은 카운트에서 제외 (viewer 는 지금 보고 있는 것 = 읽은 것)
-            Set<String> excludes = Set.of(m.sender(), viewer);
+            // sender == viewer 인 경우 Set.of 가 duplicate 예외를 던지므로 HashSet 사용.
+            Set<String> excludes = new HashSet<>();
+            excludes.add(m.sender());
+            excludes.add(viewer);
             long unread = reads.countUnreadFor(roomId, m.id(), members, excludes);
             result.add(m.withUnreadCount((int) unread));
         }
