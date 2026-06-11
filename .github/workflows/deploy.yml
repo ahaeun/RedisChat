@@ -10,10 +10,6 @@ on:
         description: '배포 브랜치'
         required: true
         default: 'main'
-      profile:
-        description: 'Spring Profile'
-        required: true
-        default: 'dev'
 
 env:
   DEPLOY_HOST: 130.162.134.13
