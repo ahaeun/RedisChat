@@ -55,7 +55,7 @@ jobs:
             ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} "
 
               echo '===== Tomcat 종료 ====='
-              cd /home/rocky/log
+              cd /home/rocky/app
               ./stop.sh
 
               sleep 5
@@ -79,13 +79,13 @@ jobs:
               ps -ef | grep ROOT.jar | grep -v grep || true
 
               echo '===== 기존 WAR 백업 ====='
-              cp /home/rocky/ROOT.jar /home/rocky/log/ROOT_backup.jar || true
+              cp /home/rocky/ROOT.jar /home/rocky/app/ROOT_backup.jar || true
 
               echo '===== 신규 WAR 반영 ====='
-              cp /home/rocky/log/ROOT.jar /home/rocky/ROOT.jar
+              cp /home/rocky/app/ROOT.jar /home/rocky/ROOT.jar
 
               echo '===== Tomcat 시작 ====='
-              cd /home/rocky/log
+              cd /home/rocky/app
               ./start.sh
 
               echo '===== 배포 완료 ====='
