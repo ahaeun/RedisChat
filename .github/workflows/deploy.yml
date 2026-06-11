@@ -17,7 +17,7 @@ env:
 
 jobs:
   deploy:
-    runs-on: rocky-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: 소스 체크아웃
