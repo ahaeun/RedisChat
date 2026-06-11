@@ -46,7 +46,7 @@ jobs:
           scp -i ~/.ssh/chat.pem \
           -o StrictHostKeyChecking=no \
           build/libs/ROOT.jar \
-          ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:/home/rocky/log
+          ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:/home/rocky/app
 
       - name: 개발 서버 배포
         run: |
