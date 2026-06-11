@@ -1,0 +1,96 @@
+name: 개발배포
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: '배포 브랜치'
+        required: true
+        default: 'main'
+      profile:
+        description: 'Spring Profile'
+        required: true
+        default: 'dev'
+
+env:
+  DEPLOY_HOST: 130.162.134.13
+  DEPLOY_USER: rocky
+
+jobs:
+  deploy:
+    runs-on: rocky-latest
+
+    steps:
+      - name: 소스 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Java 21 설정
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: 빌드
+        run: |
+          java -version
+
+          chmod +x ./gradlew
+          ./gradlew clean build -x test
+      
+      - name: SSH Key 설정
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CHAT_SSH }}" > ~/.ssh/chat.pem
+          chmod 600 ~/.ssh/chat.pem
+
+      - name: WAR 개발 서버 전송
+        run: |
+          scp -i ~/.ssh/chat.pem \
+          -o StrictHostKeyChecking=no \
+          build/libs/ROOT.jar \
+          ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:/home/rocky/log
+
+      - name: 개발 서버 배포
+        run: |
+          ssh -i ~/.ssh/chat.pem \
+            -o StrictHostKeyChecking=no \
+            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} "
+
+              echo '===== Tomcat 종료 ====='
+              cd /home/rocky/log
+              ./stop.sh
+
+              sleep 5
+
+              echo '===== Tomcat 종료 대기 ====='
+
+              for i in {1..30}
+              do
+                PID=\$(ps -ef | grep java | grep ROOT.jar | grep -v grep | awk '{print \$2}')
+
+                if [ -z \"\$PID\" ]; then
+                  echo 'Tomcat 종료 완료'
+                  break
+                fi
+
+                echo 'Tomcat 종료 대기중...'
+                sleep 2
+              done
+
+              echo '===== 최종 프로세스 확인 ====='
+              ps -ef | grep ROOT.jar | grep -v grep || true
+
+              echo '===== 기존 WAR 백업 ====='
+              cp /home/rocky/ROOT.jar /home/rocky/log/ROOT_backup.jar || true
+
+              echo '===== 신규 WAR 반영 ====='
+              cp /home/rocky/log/ROOT.jar /home/rocky/ROOT.jar
+
+              echo '===== Tomcat 시작 ====='
+              cd /home/rocky/log
+              ./start.sh
+
+              echo '===== 배포 완료 ====='
+            "
