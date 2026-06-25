@@ -2,7 +2,7 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="utf-8"/>
-    <title>로그인 - chat</title>
+    <title>회원가입 - chat</title>
     <style>
         body { font-family: -apple-system, sans-serif; max-width: 360px; margin: 80px auto; padding: 0 16px; }
         h1 { font-size: 20px; }
@@ -12,25 +12,25 @@
         .alt { margin-top: 16px; text-align: center; font-size: 13px; color: #666; }
         .alt a { color: #4a7dff; text-decoration: none; }
         .error { color: #c33; font-size: 13px; padding: 8px 10px; background: #fee; border-radius: 6px; }
-        .info  { color: #2a7; font-size: 13px; padding: 8px 10px; background: #efe; border-radius: 6px; }
+        .hint { font-size: 12px; color: #888; }
     </style>
 </head>
 <body>
-<h1>로그인</h1>
+<h1>회원가입</h1>
 
-<div class="error" th:if="${param.error}">아이디 또는 비밀번호가 올바르지 않습니다.</div>
-<div class="info"  th:if="${param.signup}">가입이 완료되었습니다. 로그인해 주세요.</div>
-<div class="info"  th:if="${param.logout}">로그아웃 되었습니다.</div>
+<div class="error" th:if="${error}" th:text="${error}">에러 메시지</div>
 
-<form method="post" action="/login">
-    <input name="username" placeholder="닉네임 (로그인 ID)" autofocus required maxlength="20"/>
-    <input name="password" type="password" placeholder="비밀번호" required/>
+<form method="post" action="/signup">
+    <input name="username" placeholder="닉네임 (로그인 ID)" required maxlength="20" autofocus
+           th:value="${username}"/>
+    <input name="password" type="password" placeholder="비밀번호 (4자 이상)" required minlength="4"/>
     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-    <button type="submit">로그인</button>
+    <button type="submit">가입</button>
 </form>
+<div class="hint">닉네임 2~20자 / 비밀번호 4자 이상</div>
 
 <div class="alt">
-    계정이 없으신가요? <a href="/signup">회원가입</a>
+    이미 계정이 있으신가요? <a href="/login">로그인</a>
 </div>
 </body>
 </html>

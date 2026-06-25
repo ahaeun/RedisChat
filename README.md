@@ -4,7 +4,8 @@ Spring Boot 4.0.6 / Java 21 기반 **WebSocket(STOMP) + Redis** 실시간 오픈
 
 ## 주요 기능
 
-- 닉네임만 입력하는 간단 로그인 (Redis 기반 세션)
+- **회원가입 / 로그인 / 로그아웃** — Spring Security + BCrypt 해싱, 세션은 Redis 에 저장
+- 닉네임이 곧 로그인 ID (= 채팅 표시명)
 - 채팅방 목록 / 생성 / 삭제 (작성자만 삭제 가능)
 - **명시적 참여 모델** — `내 채팅방` / `참여 가능한 방` 두 섹션, [참여] 버튼을 눌러야 멤버가 됨
 - **방 나가기** — 멤버에서 탈퇴 (방장은 삭제만 가능)
@@ -21,6 +22,7 @@ Spring Boot 4.0.6 / Java 21 기반 **WebSocket(STOMP) + Redis** 실시간 오픈
 | 영역 | 사용 기술 |
 |---|---|
 | 백엔드 | Spring Boot 4.0.6, Java 21, Spring WebMVC, Spring WebSocket(STOMP) |
+| 인증 | Spring Security, BCrypt 비밀번호 해싱 |
 | 뷰 | Thymeleaf, Vanilla JS, SockJS, @stomp/stompjs |
 | 저장소 | Redis (Lettuce) |
 | 세션 | Spring Session Data Redis |
@@ -44,8 +46,9 @@ docker run -d --name redis -p 6379:6379 redis
 ```
 
 ### 3. 브라우저 접속
-- http://localhost:8080 → 닉네임 입력
-- 동시에 여러 브라우저(또는 시크릿 창)로 다른 닉네임으로 접속해 실시간 채팅 확인
+- http://localhost:8080 → 미인증 시 `/login` 으로 자동 이동
+- 처음이라면 [회원가입] 링크 → 닉네임·비밀번호 입력 → 가입 후 로그인
+- 동시에 여러 브라우저(또는 시크릿 창)로 다른 계정으로 접속해 실시간 채팅 확인
 
 ## 아키텍처 개요
 
@@ -64,6 +67,14 @@ docker run -d --name redis -p 6379:6379 redis
 
 방 ID `r1` 기준 예시.
 
+### 사용자 (인증)
+| 키 | 타입 | 역할 |
+|---|---|---|
+| `users` | Set | 가입한 username 인덱스 (중복 검사 / 전체 조회) |
+| `user:{username}` | Hash | username, passwordHash(BCrypt), createdAt |
+| `spring:session:*` | Spring Session 자동 관리 | 로그인 세션 |
+
+### 채팅
 | 키 | 타입 | 역할 |
 |---|---|---|
 | `seq:room` | String (INCR) | 방 ID 시퀀스 |
@@ -77,15 +88,32 @@ docker run -d --name redis -p 6379:6379 redis
 
 ## HTTP 엔드포인트
 
+### 인증 (Spring Security)
 | 메서드 | 경로 | 용도 |
 |---|---|---|
-| `GET` | `/login`, `/logout` | 닉네임 로그인 폼 / 로그아웃 |
+| `GET` | `/login` | 로그인 폼 (`?error`, `?signup`, `?logout` 쿼리로 안내 표시) |
+| `POST` | `/login` | Spring Security 가 처리 (`UsernamePasswordAuthenticationFilter`) |
+| `GET` | `/signup` | 회원가입 폼 |
+| `POST` | `/signup` | 가입 처리 → 성공 시 `/login?signup` 으로 리다이렉트 |
+| `POST` | `/logout` | Spring Security 가 처리 (세션 무효화 → `/login?logout`) |
+
+### 채팅 (모두 인증 필요)
+| 메서드 | 경로 | 용도 |
+|---|---|---|
 | `GET` | `/rooms` | 채팅방 목록 (내 채팅방 + 참여 가능한 방) |
 | `POST` | `/rooms` | 새 채팅방 생성 (작성자 자동 멤버) |
 | `GET` | `/rooms/{id}` | 채팅방 진입 (**멤버만 가능**, 비멤버는 `/rooms` 로 리다이렉트) |
 | `POST` | `/rooms/{id}/join` | 방 멤버 등록 후 채팅방으로 자동 이동 |
 | `POST` | `/rooms/{id}/leave` | 방 멤버 탈퇴 (방장은 불가, 입장 중이었다면 LEAVE 이벤트 발행) |
 | `POST` | `/rooms/{id}/delete` | 방 삭제 (작성자만 가능, ROOM_DELETED 이벤트 발행) |
+
+> 컨트롤러에서는 `HttpSession` 대신 `java.security.Principal` 매개변수로 사용자를 식별합니다. `principal.getName()` 이 곧 username = 채팅 닉네임.
+
+### 인증·인가 정책
+- `/login`, `/signup`, `/ws-stomp/**`, 정적 리소스(`/js/**`, `/css/**`)는 누구나 접근 가능
+- 그 외 모든 요청은 인증 필요 → 미인증 시 `/login` 으로 리다이렉트
+- CSRF 기본 활성화, **SockJS 핸드셰이크(`/ws-stomp/**`)만 CSRF 검사 제외** (STOMP.js 가 토큰을 실어 보내지 않음)
+- POST 폼은 Thymeleaf 의 `th:action` 사용으로 CSRF 토큰 자동 주입 / 정적 `action` 인 경우엔 hidden input 으로 직접 주입
 
 ## STOMP 엔드포인트
 
@@ -137,18 +165,18 @@ docker run -d --name redis -p 6379:6379 redis
 ```
 src/main/java/com/haeun/chat/
 ├── ChatApplication.java
-├── config/             # Redis, WebSocket(STOMP) 설정
-├── controller/         # LoginController, RoomController, ChatStompController
-├── domain/             # ChatRoom, ChatMessage, RoomEventType
+├── config/             # Redis, WebSocket(STOMP), Security 설정
+├── controller/         # LoginController, SignupController, RoomController, ChatStompController
+├── domain/             # User, ChatRoom, ChatMessage, RoomEventType
 ├── dto/                # RoomEvent, RoomListItem, RoomLists, SendMessageRequest
 ├── listener/           # WsSessionRegistry, WebSocketEventListener (비정상 종료 처리)
-├── repository/         # Room/Message/Presence/ReadRedisRepository
-└── service/            # RoomService, ChatService
+├── repository/         # User/Room/Message/Presence/ReadRedisRepository
+└── service/            # UserService, RedisUserDetailsService, RoomService, ChatService
 
 src/main/resources/
 ├── application.properties
 ├── static/js/          # room.js (채팅방 STOMP), rooms.js (목록 라이브 갱신)
-└── templates/          # login.html, rooms.html, room.html
+└── templates/          # login.html, signup.html, rooms.html, room.html
 
 src/test/java/com/haeun/chat/
 ├── ChatApplicationTests.java   # 컨텍스트 로드 (Redis mock)
@@ -174,6 +202,14 @@ src/test/java/com/haeun/chat/
 | `server.port` | `8080` | 서버 포트 |
 
 ## 동작 확인 시나리오
+
+### 회원가입 / 로그인 / 로그아웃
+1. http://localhost:8080 → `/login` 으로 자동 리다이렉트
+2. [회원가입] 링크 → `/signup` → 닉네임(2~20자) + 비밀번호(4자 이상) 입력 → 가입
+3. `/login?signup` 으로 이동, "가입이 완료되었습니다" 안내 표시
+4. 같은 닉네임/비번으로 로그인 → `/rooms` 진입
+5. 비밀번호를 틀리면 `/login?error`, "아이디 또는 비밀번호가 올바르지 않습니다" 표시
+6. 우측 상단 [로그아웃] → `/login?logout`, "로그아웃 되었습니다" 안내
 
 ### 참여 / 나가기 + 시스템 메시지 확인
 1. 브라우저 A 와 B (시크릿 창) 로 각각 다른 닉네임으로 로그인
@@ -219,6 +255,6 @@ src/test/java/com/haeun/chat/
 
 - 단일 인스턴스 가정 (`WsSessionRegistry` 는 in-memory). 다중 인스턴스 운영 시 Redis Hash 로 옮기고 STOMP 브로커도 외부 Relay 로 교체 필요
 - 메시지 TTL 7일 — 그 이전 메시지는 Redis 에서 자동 삭제됨
-- 로그인은 닉네임 중복 검사 없음 (학습용)
 - **방장은 본인 방에서 [나가기] 불가** — 방을 삭제만 가능 (양도 기능 없음)
 - 멤버 탈퇴 시 `lastRead` 도 함께 정리되므로, 다시 참여하면 그 시점의 최신 메시지부터 시작 (탈퇴 이전 안 읽음 위치는 복원 안 됨)
+- 회원가입은 닉네임/비밀번호만 받음 — 이메일·재설정·이메일 인증 없음 (학습용)

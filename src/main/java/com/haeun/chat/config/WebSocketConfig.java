@@ -5,7 +5,6 @@ import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
-import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
 
 /**
  * STOMP over WebSocket 설정.
@@ -25,10 +24,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // Spring Security 가 HTTP 핸드셰이크 단계에서 인증을 보장하고
+        // 인증된 Principal 을 WebSocket 세션에 자동 주입한다.
         registry.addEndpoint("/ws-stomp")
                 .setAllowedOriginPatterns("*")
-                // HTTP 세션 attribute (nickname 등) 을 WebSocket 세션으로 복사
-                .addInterceptors(new HttpSessionHandshakeInterceptor())
                 .withSockJS();
     }
 }

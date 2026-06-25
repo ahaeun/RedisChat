@@ -33,13 +33,13 @@
     <h1>채팅방</h1>
     <div>
         <span class="me" th:text="${nickname}">nickname</span>
-        <form method="post" action="/logout" style="display:inline">
+        <form method="post" th:action="@{/logout}" style="display:inline">
             <button type="submit" class="logout">로그아웃</button>
         </form>
     </div>
 </header>
 
-<form class="create" method="post" action="/rooms">
+<form class="create" method="post" th:action="@{/rooms}">
     <input name="name" placeholder="새 채팅방 이름" required maxlength="40"/>
     <button type="submit">방 만들기</button>
 </form>
