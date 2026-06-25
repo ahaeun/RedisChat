@@ -9,6 +9,8 @@
         header h1 { font-size: 16px; margin: 0; flex: 1; }
         header a { color: #4a7dff; text-decoration: none; font-size: 13px; }
         .pcount { background: #f1f3f5; color: #555; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+        .leave-btn { background: transparent; border: 0; color: #c33; font-size: 13px; cursor: pointer; padding: 4px 8px; }
+        .leave-btn:hover { text-decoration: underline; }
         #log { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
         .msg { display: flex; gap: 6px; align-items: flex-end; }
         .msg.me { justify-content: flex-end; }
@@ -16,6 +18,9 @@
         .bubble { background: #f1f3f5; padding: 8px 12px; border-radius: 14px; max-width: 70%; word-break: break-word; }
         .msg.me .bubble { background: #4a7dff; color: white; }
         .unread { font-size: 11px; color: #ff5757; min-width: 12px; text-align: right; }
+        /* 남의 메시지: 안 읽음 표시를 말풍선 오른쪽으로 (카톡 스타일) */
+        .msg:not(.me) .bubble { order: 1; }
+        .msg:not(.me) .unread { order: 2; }
         .system { font-size: 12px; color: #999; text-align: center; padding: 4px 0; }
         form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #eee; }
         form input { flex: 1; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; }
@@ -27,6 +32,13 @@
     <a href="/rooms">← 목록</a>
     <h1 th:text="${room.name}">방 이름</h1>
     <span class="pcount">👤 <span id="pcount">0</span></span>
+    <form th:if="${room.createdBy != nickname}"
+          th:action="@{'/rooms/' + ${room.id} + '/leave'}"
+          method="post"
+          onsubmit="return confirm('이 방에서 나가시겠습니까?');"
+          style="margin:0">
+        <button type="submit" class="leave-btn">나가기</button>
+    </form>
 </header>
 
 <div id="log">

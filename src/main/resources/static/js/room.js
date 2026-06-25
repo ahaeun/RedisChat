@@ -41,11 +41,14 @@
     function handleEvent(ev) {
         switch (ev.type) {
             case 'ENTER':
+            case 'LEAVE':
+                // 채팅 페이지 여닫기는 참가자 수만 갱신, 시스템 메시지는 띄우지 않음
                 pcount.textContent = ev.participantCount;
+                break;
+            case 'JOIN':
                 appendSystem(ev.user + ' 님이 입장했습니다');
                 break;
-            case 'LEAVE':
-                pcount.textContent = ev.participantCount;
+            case 'LEAVE_ROOM':
                 appendSystem(ev.user + ' 님이 나갔습니다');
                 break;
             case 'MESSAGE':
@@ -62,16 +65,20 @@
     }
 
     function appendMessage(m) {
+        const isMine = m.sender === ME;
         const row = document.createElement('div');
-        row.className = 'msg' + (m.sender === ME ? ' me' : '');
+        row.className = 'msg' + (isMine ? ' me' : '');
         row.setAttribute('data-msg-id', m.id);
 
-        if (m.sender !== ME) {
+        if (!isMine) {
             const s = document.createElement('span');
             s.className = 'sender';
             s.textContent = m.sender;
             row.appendChild(s);
         }
+
+        // 안 읽음 표시: 보낸 사람·viewer 본인을 제외한 멤버 중 안 읽은 수.
+        // span 자체는 항상 만들어둬야 UNREAD_UPDATE 가 도착했을 때 갱신 가능.
         const u = document.createElement('span');
         u.className = 'unread';
         if (m.unreadCount > 0) u.textContent = m.unreadCount;

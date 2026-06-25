@@ -28,6 +28,8 @@ import java.util.Set;
  *  2) 현재 online 사용자 전원의 lastRead = msgId 로 갱신
  *  3) unreadCount = members - online (보낸이는 online 에 포함됨)
  *  4) MESSAGE 이벤트 발행
+ * 
+ *  convertAndSend 메소드 호출 시 client.subscribe된 유저들에게 handleEvent function(js)이 실행됨
  */
 @Service
 public class ChatService {
@@ -50,7 +52,8 @@ public class ChatService {
     }
 
     public synchronized void enter(String roomId, String user) {
-        presence.addMember(roomId, user);
+        // 멤버십은 RoomService.join 에서 이미 보장된 상태로 호출된다 (HTTP 컨트롤러에서 검증).
+        // 여기서는 "지금 페이지를 보고 있다(online)" 만 갱신한다.
         presence.online(roomId, user);
 
         long oldLastRead = reads.getLastRead(roomId, user);
@@ -62,6 +65,7 @@ public class ChatService {
                     RoomEvent.unreadUpdate(user, oldLastRead + 1, maxId));
         }
 
+        // 현재 방에 접속하고 있는 유저 수
         long participantCount = presence.onlineCount(roomId);
         broker.convertAndSend(topic(roomId), RoomEvent.enter(user, participantCount));
     }

@@ -7,18 +7,24 @@
         body { font-family: -apple-system, sans-serif; max-width: 640px; margin: 32px auto; padding: 0 16px; }
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         h1 { font-size: 22px; margin: 0; }
+        h2 { font-size: 15px; color: #555; margin: 24px 0 8px; }
         .me { color: #666; font-size: 13px; }
-        form.create { display: flex; gap: 8px; margin-bottom: 24px; }
+        form.create { display: flex; gap: 8px; margin-bottom: 16px; }
         form.create input { flex: 1; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; }
         form.create button { padding: 8px 14px; border: 0; border-radius: 6px; background: #4a7dff; color: white; cursor: pointer; }
         ul { list-style: none; padding: 0; margin: 0; }
         li { padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-        li a { flex: 1; color: #111; text-decoration: none; font-weight: 500; }
+        li a, li .name { flex: 1; color: #111; text-decoration: none; font-weight: 500; }
+        li .name { color: #444; font-weight: 400; }
+        .by { font-size: 12px; color: #888; margin-left: 4px; }
         .badge { background: #f1f3f5; color: #555; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
         .unread { background: #ff5757; color: white; }
-        .delete-btn { background: transparent; border: 0; color: #c33; font-size: 12px; cursor: pointer; padding: 4px 6px; }
-        .delete-btn:hover { text-decoration: underline; }
-        .empty { color: #888; text-align: center; padding: 40px 0; }
+        .btn { padding: 6px 12px; border: 0; border-radius: 6px; font-size: 13px; cursor: pointer; }
+        .btn-join  { background: #4a7dff; color: white; }
+        .btn-leave { background: #f1f3f5; color: #555; }
+        .btn-delete { background: transparent; color: #c33; padding: 4px 6px; }
+        .btn-delete:hover { text-decoration: underline; }
+        .empty { color: #888; padding: 12px; font-size: 13px; }
         .logout { background: transparent; border: 0; color: #888; cursor: pointer; font-size: 12px; }
     </style>
 </head>
@@ -38,21 +44,53 @@
     <button type="submit">방 만들기</button>
 </form>
 
-<ul th:if="${!rooms.isEmpty()}">
-    <li th:each="r : ${rooms}">
+<h2>내 채팅방</h2>
+<ul th:if="${!rooms.joined.isEmpty()}">
+    <li th:each="r : ${rooms.joined}" th:attr="data-room-id=${r.id}">
         <a th:href="@{'/rooms/' + ${r.id}}" th:text="${r.name}">방 이름</a>
         <span class="badge" th:text="'👤 ' + ${r.participantCount}">👤 0</span>
         <span class="badge unread" th:if="${r.unreadCount > 0}" th:text="${r.unreadCount}">0</span>
+
+        <!-- 작성자: 삭제 / 일반 멤버: 나가기 -->
         <form th:if="${r.createdBy == nickname}"
               th:action="@{'/rooms/' + ${r.id} + '/delete'}"
               method="post"
               onsubmit="return confirm('이 방을 삭제하시겠습니까? 모든 메시지가 사라집니다.');"
               style="margin:0">
-            <button type="submit" class="delete-btn" title="방 삭제">🗑</button>
+            <button type="submit" class="btn btn-delete" title="방 삭제">🗑 삭제</button>
+        </form>
+        <form th:unless="${r.createdBy == nickname}"
+              th:action="@{'/rooms/' + ${r.id} + '/leave'}"
+              method="post"
+              onsubmit="return confirm('이 방에서 나가시겠습니까?');"
+              style="margin:0">
+            <button type="submit" class="btn btn-leave">나가기</button>
         </form>
     </li>
 </ul>
-<div class="empty" th:if="${rooms.isEmpty()}">아직 방이 없어요. 위에서 만들어 보세요.</div>
+<div class="empty" th:if="${rooms.joined.isEmpty()}">참여 중인 방이 없어요. 아래에서 참여해 보세요.</div>
 
+<h2>참여 가능한 방</h2>
+<ul th:if="${!rooms.available.isEmpty()}">
+    <li th:each="r : ${rooms.available}">
+        <span class="name">
+            <span th:text="${r.name}">방 이름</span>
+            <span class="by" th:text="'· by ' + ${r.createdBy}">· by user</span>
+        </span>
+        <span class="badge" th:text="'👤 ' + ${r.participantCount}">👤 0</span>
+        <form th:action="@{'/rooms/' + ${r.id} + '/join'}" method="post" style="margin:0">
+            <button type="submit" class="btn btn-join">참여</button>
+        </form>
+    </li>
+</ul>
+<div class="empty" th:if="${rooms.available.isEmpty()}">참여 가능한 다른 방이 없어요.</div>
+
+<script th:inline="javascript">
+    const ME = /*[[${nickname}]]*/ '';
+    const JOINED_ROOM_IDS = /*[[${joinedIds}]]*/ [];
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+<script src="/js/rooms.js"></script>
 </body>
 </html>

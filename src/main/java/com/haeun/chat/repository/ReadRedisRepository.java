@@ -31,6 +31,10 @@ public class ReadRedisRepository {
         redis.opsForHash().put(key(roomId), user, String.valueOf(msgId));
     }
 
+    public void removeLastRead(String roomId, String user) {
+        redis.opsForHash().delete(key(roomId), user);
+    }
+
     /** 입장 중인 사용자 전원의 lastRead 를 msgId 로 일괄 갱신. */
     public void setLastReadBulk(String roomId, Iterable<String> users, long msgId) {
         Map<String, String> updates = new HashMap<>();

@@ -25,6 +25,15 @@ public class PresenceRedisRepository {
         redis.opsForSet().add(membersKey(roomId), user);
     }
 
+    public void removeMember(String roomId, String user) {
+        redis.opsForSet().remove(membersKey(roomId), user);
+    }
+
+    public boolean isMember(String roomId, String user) {
+        Boolean b = redis.opsForSet().isMember(membersKey(roomId), user);
+        return Boolean.TRUE.equals(b);
+    }
+
     public long memberCount(String roomId) {
         Long c = redis.opsForSet().size(membersKey(roomId));
         return c == null ? 0 : c;
@@ -33,6 +42,11 @@ public class PresenceRedisRepository {
     public Set<String> members(String roomId) {
         Set<String> s = redis.opsForSet().members(membersKey(roomId));
         return s == null ? Set.of() : s;
+    }
+
+    public boolean isOnline(String roomId, String user) {
+        Boolean b = redis.opsForSet().isMember(onlineKey(roomId), user);
+        return Boolean.TRUE.equals(b);
     }
 
     public void online(String roomId, String user) {

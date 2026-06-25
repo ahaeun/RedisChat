@@ -41,4 +41,12 @@ public record RoomEvent(
     public static RoomEvent roomDeleted() {
         return new RoomEvent(RoomEventType.ROOM_DELETED, null, null, null, null, null);
     }
+
+    public static RoomEvent join(String user) {
+        return new RoomEvent(RoomEventType.JOIN, user, null, null, null, null);
+    }
+
+    public static RoomEvent leftRoom(String user) {
+        return new RoomEvent(RoomEventType.LEAVE_ROOM, user, null, null, null, null);
+    }
 }
